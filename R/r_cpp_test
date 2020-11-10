@@ -1,0 +1,19 @@
+library(Rcpp)
+Rcpp::cppFunction("
+bool BallMapper_cpp( const std::vector< std::vector<double> >& points , std::vector<double> values , double epsilon ) 
+{
+Rcout << "AAA";
+}")
+
+
+library("Rcpp")
+Rcpp::cppFunction("
+void showValue(double x) {
+Rcout << "The value is " << x << std::endl;
+}")
+
+	std::cout << "points.size() : " << points.size() << std::endl;
+	std::cout << "values.size() : " << values.size() << std::endl;
+	std::cout << "epsilon : " << epsilon << std::endl;
+
+
