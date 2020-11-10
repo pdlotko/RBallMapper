@@ -3,13 +3,15 @@ library(scales)
 library(networkD3)
 library(stringr)
 library(Rcpp)
+library(data.table)
+
 
 
 #' @export
 BallMapperCpp <- function( points , values , epsilon )
 {
   output <- BallMapperCppInterface( points , values , epsilon )
-  colnames(output$vertices) = c('id','size')  
+  colnames(output$vertices) = c('id','size')
   return_list <- output
 }#BallMapperCpp
 
@@ -219,11 +221,11 @@ ColorIgraphPlot <- function( outputFromBallMapper, showVertexLabels = TRUE , sho
   #and over here we map the pallete to the order of values on vertices
   min_ <- min(outputFromBallMapper$coloring)
   max_ <- max(outputFromBallMapper$coloring)
-  
+
   #In some cases, the maximal values are achieved, and then the balls are not colored. To avoid this situaiton, we shift the values by a bit to get something slightly below min and slightly above max (relative to the distnace between the minimym and the maximum).
   min_ <- min_-0.01*(max_-min_)
   max_ <- max_+0.01*(max_-min_)
-  
+
   color <- vector(length = length(outputFromBallMapper$coloring),mode="double")
   for ( i in 1:length( outputFromBallMapper$coloring ) )
   {
@@ -690,20 +692,15 @@ storeBallMapperGraphInFile <- function( outputFromBallMapper , filename = "BM_gr
 
   #Writing points covered by landmarks. This part is a bit more tricky, as this is a list
   #In this case, I want to have points covered by landmark i in the i-th line of the file. To
-  #achieve this, each line is store as a string, and those strings are grouped in a vector.
-  output <- vector()
-  for ( i in 1:length( outputFromBallMapper$points_covered_by_landmarks ) )
+  #achieve this, each line is store as a string and each string is appended at the end of the
+  #output file. fwrite speeds up the process quite a lot
+
+  for ( i in 1:length(outputFromBallMapper$points_covered_by_landmarks) )
   {
-    line <- ""
-    for ( j in 1:length( outputFromBallMapper$points_covered_by_landmarks[[i]] ) )
-    {
-        line <- paste( line , outputFromBallMapper$points_covered_by_landmarks[[i]][j] )
-    }
-    output <- c( output , line )
+    fwrite(as.list(outputFromBallMapper$points_covered_by_landmarks[[i]]),
+           file = paste(filename,"_points_covered_by_landmarks",sep=""),
+           append = T, sep = " ", quote = F)
   }
-  fileConn<-file(paste(filename,"_points_covered_by_landmarks",sep=""))
-  writeLines(output, fileConn)
-  close(fileConn)
 
   #Writing landmarks
   utils::write.table(outputFromBallMapper$landmarks, file=paste(filename,"_landmarks",sep=""), col.names = F, row.names = F)
@@ -857,15 +854,15 @@ colorByStDevValueOfOtherVariable<- function( outputFromBallMapper , newFunctionO
 
 
 #' This function take as an input the number of all points in the
-#' dataset, a distinct set of subset of points and the values used 
+#' dataset, a distinct set of subset of points and the values used
 #' to color. The last parameter is the number used to color the remaining
-#' vertices (if any). It is a default value. 
+#' vertices (if any). It is a default value.
 #' @param numberOfPoints total number of points to consider. It is equal to the size of the output vector.
 #' @param classesToColor a vector of distinct vectors of numbers between 1 and numberOfPoints. They will be coloured with different colours given in the colourValues variable. All the vertices that are not an element of one of those collections will be coloured using the default value provided in valueToColourRemainingPointsWith.
 #' @param colourValues a vector of numbers of the length length(classesToColor). They will be used to colour corresponding classes provided in classesToColor.
 #' @param valueToColourRemainingPointsWith is a default colour used to color all the vertices that are not in the classesToColor.
-#' @return A new vector of colors. 
-#' @example 
+#' @return A new vector of colors.
+#' @example
 #' x <- seq(from=0,to=6.3,by=0.1)
 #' points <- as.data.frame( cbind( sin(x),cos(x) ) )
 #' selectedsegment1 <- 1:10
@@ -879,8 +876,8 @@ colorByStDevValueOfOtherVariable<- function( outputFromBallMapper , newFunctionO
 #' valueToColourRemainingPointsWith <- 10
 #' newColouring <- colourBySelectedPoints( numberOfPoints , classesToColor , colourValues , valueToColourRemainingPointsWith )
 #' l <- BallMapper(points,newColouring,0.4)
-#' ColorIgraphPlot(l)  
-#' @export 
+#' ColorIgraphPlot(l)
+#' @export
 colourBySelectedPoints<- function( numberOfPoints , classesToColor , colourValues , valueToColourRemainingPointsWith )
 {
   newColour <- rep(valueToColourRemainingPointsWith, numberOfPoints)
